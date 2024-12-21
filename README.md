@@ -1,124 +1,66 @@
 # **Embedded Recruitment Task**
 
-## **Overview**
+# Solution
 
-Welcome to the **Embedded Recruitment Task**! This task is designed to assess your ability to analyze, debug, and enhance a server application written in Rust. The objective is to transition the server from a buggy, single-threaded implementation to a robust, multithreaded architecture capable of handling concurrent clients efficiently.
+# Rust Server with Multithreading and Client Handling
 
-## **Task Description**
+This project implements a multithreaded Rust server that can handle multiple clients simultaneously. The server processes messages from clients using Protocol Buffers (`prost`) and provides functionality for echoing messages and performing addition operations.
 
-### **What You’ll Be Working On**
-You’ll be provided with:
-- A buggy, single-threaded Rust server implementation.
-- A client test suite to evaluate the server’s behavior.
+## Features and Improvements
 
-Your task:
-1. Debug and fix the existing server code.
-2. Transition the server from single-threaded to multithreaded.
-3. Enhance the server to handle multiple clients concurrently while maintaining data consistency.
-4. Use and extend the provided test suite to ensure the server meets all requirements.
+### Key Features
+- **Multithreaded Client Handling**: Each client connection is processed in its own thread, allowing the server to handle multiple clients concurrently.
+- **Protocol Buffers Support**: Messages between the client and server are encoded and decoded using `prost`.
+- **Graceful Client Disconnection**: The server handles client disconnections cleanly, ensuring resources are properly released.
+- **Custom Messages**: The server supports two types of client messages:
+  - `EchoMessage`: The server echoes back the received content.
+  - `AddRequest`: The server performs addition on two integers and returns the result.
 
-### **Objectives**
-1. **Analyze the Existing Server Code:**
-   - Identify and fix intentional bugs in the provided implementation.
-   - Understand the limitations of the single-threaded architecture.
+### Improvements in the New Code
+1. **Thread Safety**: The `is_running` flag is wrapped in an `Arc<AtomicBool>` to allow safe access across threads.
+2. **Error Handling**: Improved error messages and logging for better debugging.
+3. **Graceful Shutdown**: The server can shut down cleanly by setting a flag to stop accepting new connections.
+4. **Non-blocking I/O**: The server uses non-blocking mode to prevent stalling when no clients are connected.
+5. **Message Decoding**: Enhanced decoding logic to handle various message types robustly.
 
-2. **Transition to Multithreading:**
-   - Modify the server to handle multiple clients using Rust’s multithreading libs.
-   - Implement proper synchronization mechanisms to ensure thread safety.
+## Implementation Details
 
-3. **Enhance Server Architecture:**
-   - Resolve any architectural flaws related to single-threaded assumptions.
-   - Optimize the server for scalability and concurrent request handling.
+### Server
+The server listens for incoming TCP connections on a specified address and spawns a new thread for each client. It uses:
+- `TcpListener` for accepting connections.
+- `AtomicBool` to track the server's running state.
 
-4. **Testing and Validation:**
-   - Run the provided test suite to verify functionality.
-   - Augment the test suite with additional test cases to cover edge cases and concurrency scenarios.
+#### Main Responsibilities:
+1. Accepting client connections.
+2. Spawning threads to handle individual clients.
+3. Managing server shutdown.
 
-5. **Demonstrate Code Quality:**
-   - Write clean, maintainable, and well-documented code.
-   - Provide comments and documentation to explain your changes.
+### Client
+Each client connection is wrapped in a `Client` struct that manages the TCP stream. It:
+- Reads incoming messages.
+- Decodes messages using Protocol Buffers.
+- Sends appropriate responses based on the message type.
 
-# Submission Instructions
-Once you have completed the task to the best of your ability:
+#### Supported Messages:
+- **EchoMessage**: Contains a string to be echoed back to the client.
+- **AddRequest**: Contains two integers (`a` and `b`). The server responds with their sum.
 
-1. Prepare your solution, including:
-   - The updated server implementation.
-   - The test results and any additional test cases you added.
-   - Documentation (see the Deliverables section for details).
-2. Send your solution as a response to the recruitment email you received.
-   - Please ensure all required files are attached, or provide a link to a hosted repository (e.g., GitHub, GitLab) if your solution is hosted online.
-
-We understand the task may be challenging, and all solutions will be evaluated based on effort, approach, and quality. Even partial solutions that demonstrate thoughtful design and debugging skills are welcome.
-
-## **Requirements**
-
-### **Functional Requirements**
-- The server shall:
-  - Handle multiple clients concurrently.
-  - Maintain data consistency and avoid race conditions, deadlocks, and starvation.
-  - Log meaningful error messages and warnings.
-
-### **Technical Requirements**
-- Use Rust’s standard multithreading libraries or async runtime for concurrency.
-- Implement synchronization mechanisms to ensure thread safety.
-- Ensure the server adheres to performance requirements without unnecessary delays.
-
-## **Getting Started**
-
-### **Prerequisites**
-- Basic Rust knowledge [Rust book](https://doc.rust-lang.org/book/title-page.html)
-- Install Rust (latest stable version recommended). [Rust Installation Guide](https://www.rust-lang.org/tools/install)
-- Familiarity with Rust multithreading and asynchronous programming concepts. [Rust Concurrency](https://doc.rust-lang.org/book/ch16-00-concurrency.html)
-- Install protoc to compile a protobuf message [Protocol buffers](https://protobuf.dev/overview/)
-
-### **Repository Structure**
-```plaintext
-.
-|── proto/
-│   └── messages.proto        # IDL with messages server handle
-├── src/
-│   ├── main.rs               # Server implementation (single-threaded and buggy)
-│   └── lib.rs                # Core server logic
-├── tests/
-│   └── client_test.rs        # Client test suite
-├── .gitignore
-├── build.rs                  # Build script for compiling the Proto file
-├── Cargo.toml                # Rust dependencies and configuration
-├── README.md                 # Task instructions
-└── SOLUTION.md               # Place for your findings and analysis
-```
-
-## Running Tests
-
-To run the provided test suite:
-
+### Test the Server
 ```bash
-cargo test
+cargo test -- --test-threads=1
 ```
+The server listens on `127.0.0.1:8080` by default.
 
-## Deliverables
+### Sending Messages
+Clients can send Protocol Buffer-encoded messages to the server. Use any TCP client or implement your own using the provided `.proto` definitions.
 
-1. Updated Server Implementation
-   - Fully functional server that adheres to the multithreading requirements.
-2. Test Suite Results
-   - Evidence (e.g., logs) that your server passes all tests.
-   - Any additional test cases you added to the test suite.
-3. Documentation:
-   - Inline comments in the code to explain significant changes.
-   - Bug Analysis and Fix Report
-4. A brief document outlining:
-   - The identified bugs in the initial implementation.
-   - How architectural flaws were addressed.
+## Known Issues
+1. **Message Encoding/Decoding**: Ensure the client encodes messages according to the `.proto` schema.
+2. **Resource Management**: The server relies on the operating system to reclaim resources for terminated threads.
+3. **Thread Lifetime**: Threads are not explicitly joined; they run until the client disconnects or an error occurs.
 
-## Evaluation Criteria
-
-Your submission will be evaluated based on the following criteria:
-- **Correctness**: Does the updated server meet the functional and technical requirements?
-- **Bug Fixes**: How effectively were the provided bugs identified and resolved?
-- **Design Improvement**: Was the transition to multithreading executed appropriately? Were architectural flaws addressed?
-- **Testing**: Does the server pass all provided and additional tests? Are the new tests meaningful and comprehensive?
-- **Code Quality**: Is the code clean, maintainable, and well-documented?
-
-## Good Luck!
-
-We’re excited to see how you approach this task. If you have any questions or run into issues, don’t hesitate to reach out.
+## Future Improvements
+- **Thread Pooling**: Replace per-client threads with a thread pool to manage resources more efficiently.
+- **Asynchronous I/O**: Use async Rust (`tokio` or `async-std`) for improved scalability.
+- **Logging Enhancements**: Provide structured and configurable logging.
+- **Comprehensive Tests**: Add unit and integration tests to verify functionality.
